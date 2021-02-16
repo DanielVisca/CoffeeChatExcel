@@ -2,11 +2,16 @@ import csv
 import random
 import json
 import openpyxl
-from openpyxl import Workbook
 from pathlib import Path
 import os
 import io
-from json import JSONEncoder
+import tkinter as tk
+# try:
+#     # for Python2
+#     from Tkinter as tk   ## notice capitalized T in Tkinter 
+# except ImportError:
+#     # for Python3
+#     from tkinter as tk 
 
 
 class CoffeeChat:
@@ -18,14 +23,34 @@ class CoffeeChat:
     }
     """
     def __init__(self):
-        self.wb = Workbook()
         self.upload() # creates self.people and self.previous_matches
         self.update_people()
-        self.random_match()
-        self.save()
-        self.print_matches()
-        print(self.test())
+        self.gui()
+    
+    def gui(self):
+        window = tk.Tk()
+        label = tk.Label(text="Hello, Aidan! Coffee Chat time :)")
+        label.pack()
+        window.mainloop()
+        button = tk.Button(
+            text="Generate new partners!",
+            width=10,
+            height=5,
+            command=self.random_match()
+        )
+        button1 = tk.Button(
+            text="Save partners to excel",
+            width=10,
+            height=5,
+            command=self.save()
+        )
+        button.pack()
+        button1.pack()
         
+        
+        # self.print_matches()
+        # print(self.test())
+
     def save(self):
         data = {
             'people': [person for person in self.people],
@@ -60,8 +85,8 @@ class CoffeeChat:
 
     def get_people_excel(self):
         xlsx_file = Path('CoffeeChat.xlsx')
-        wb_obj = openpyxl.load_workbook(xlsx_file)
-        sheet = wb_obj['enrolled']
+        self.wb_obj = openpyxl.load_workbook(xlsx_file)
+        sheet = self.wb_obj['enrolled']
         people = []
         for row in sheet.iter_rows(max_row=sheet.max_row):
             person = Person(row[0].value, row[1].value, row[2].value ,row[3].value)
@@ -92,10 +117,11 @@ class CoffeeChat:
         add it to self.matches (which will be added to db)
         """
         new_match = Match(p1, p2)
+        e3, e4 = new_match['emails']
         for match in self.previous_matches:
             e1, e2 = match['emails']
-            e3, e4 = new_match['emails']
-
+            
+            # also set( of size 2 or less)
             # Check if both emails match
             if ((e1 == e3) or (e1 == e4)) and ((e2 == e3) or (e2 == e4)):
                 return False
@@ -110,13 +136,6 @@ class CoffeeChat:
         match_list = []
         people_to_match = self.people.copy()
         unmatched = None
-        if len(people_to_match) % 2 != 0:
-            # Odd list:
-            unmatched = random.choice(people_to_match)
-            people_to_match.remove(unmatched)
-            print(unmatched, " does not have a partner.")
-        else:
-            print("everyone is matched up this week")
 
         while len(people_to_match) > 1:
             person = random.choice(people_to_match)
@@ -126,9 +145,12 @@ class CoffeeChat:
             random_partner = random.choice(people_to_match)
             match = self.match(person, random_partner)
 
+            seen_everyone = []
             tried = [random_partner]
             while not match: # already matched previously
+            # maybe shift this to lower in the while loop
                 if len(tried) >= len(people_to_match):
+                    seen_everyone.append(person)
                     print(person['email'], " has matched with everyone already and cannot find a partner")
                     break
                 random_partner = random.choice(people_to_match)
@@ -143,7 +165,7 @@ class CoffeeChat:
                 good_match = Match(person, random_partner)
                 match_list.append(good_match)
                 self.previous_matches.append(good_match)
-            
+        
         self.match_list = match_list
 
     def print_matches(self):
@@ -158,13 +180,13 @@ class CoffeeChat:
         return len(self.previous_matches) == possible_matches
     
     def write(self):
-        ws1 = self.wb.create_sheet("matches")
+        ws1 = self.wb_obj.create_sheet("week")
         for match in self.match_list:
             people1 = match['people'][0]
             people2 = match['people'][1]
             row = (people1['email'], people1['first_name'], people1['last_name'], people1['position'], '', people2['email'], people2['first_name'], people2['last_name'], people2['position'])
             ws1.append(row)
-        self.wb.save("CoffeeChat.xlsx")
+        self.wb_obj.save("CoffeeChat.xlsx")
 
 def Person(email, first_name, last_name, position):
     return {
@@ -180,46 +202,5 @@ def Match(p1,p2):
         "people": (p1, p2)
     }
 
-# class Person():
-#     def __init__(self, email, first_name, last_name, position):
-#         self.email = email
-#         self.first_name = first_name
-#         self.last_name = last_name
-#         self.position = position
-#         self.has_matched_with = []
-    
-#     def __eq__(self, o: object) -> bool:
-#         try:
-#             return o.email == self.email
-#         except:
-#             return False
-    
-#     def toJson(self):
-#         return json.dumps(self, default=lambda o: o.__dict__)
-    
-
-# class Match():
-#     def __init__(self, person1, person2):
-#         self.emails = set(person1.email, person2.email)
-#         self.people = (person1, person2)
-    
-#     def __eq__(self, o: object) -> bool:
-#         """
-#         Two match objects are equal if the emails are the same
-#         """
-#         if o.emails == self.emails:
-#             return True
-#         else:
-#             return False
-    
-#     def toJson(self):
-#         return json.dumps(self, default=lambda o: o.__dict__)
-
-    
-
-cc = CoffeeChat()
-# p1 = Person('danman@gmail.com', 'dan', 'man', 'software engineer')
-# print(p1.__dict__)
-# name, last_name , email, position
-
-# dmg file 
+if __name__ == '__main__':
+    cc = CoffeeChat()
